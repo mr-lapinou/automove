@@ -48,28 +48,34 @@ import deluge.common
 from common import get_resource
 
 class GtkUI(GtkPluginBase):
-    def enable(self):
-        self.glade = gtk.glade.XML(get_resource("config.glade"))
+	def enable(self):
+		log.debug("applying prefs for automove")
+		
 
-        component.get("Preferences").add_page("automove", self.glade.get_widget("prefs_box"))
-        component.get("PluginManager").register_hook("on_apply_prefs", self.on_apply_prefs)
-        component.get("PluginManager").register_hook("on_show_prefs", self.on_show_prefs)
+	def disable(self):
+		log.debug("applying prefs for automove")
 
-    def disable(self):
-        component.get("Preferences").remove_page("automove")
-        component.get("PluginManager").deregister_hook("on_apply_prefs", self.on_apply_prefs)
-        component.get("PluginManager").deregister_hook("on_show_prefs", self.on_show_prefs)
+	def on_apply_prefs(self):
+		log.debug("applying prefs for automove")
 
-    def on_apply_prefs(self):
-        log.debug("applying prefs for automove")
-        config = {
-            "test":self.glade.get_widget("txt_test").get_text()
-        }
-        client.automove.set_config(config)
 
-    def on_show_prefs(self):
-        client.automove.get_config().addCallback(self.cb_get_config)
+		
+	def populate_list(self):
+		pass
+	
+	
+	def add_entry(self):
+		pass
+		
+		
+	def addtracker(self, source=None, event=None):
 
-    def cb_get_config(self, config):
-        "callback for on show_prefs"
-        self.glade.get_widget("txt_test").set_text(config["test"])
+		return True
+
+	def on_show_prefs(self):
+		pass
+
+	def cb_get_config(self, config):
+		"callback for on show_prefs"
+		pass
+		

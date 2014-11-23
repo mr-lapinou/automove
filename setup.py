@@ -40,10 +40,10 @@
 from setuptools import setup
 
 __plugin_name__ = "automove"
-__author__ = "Thibault Person"
+__author__ = "Thibault Persondsfsf"
 __author_email__ = "thibaultperson@gmail.com"
 __version__ = "0.1"
-__url__ = ""
+__url__ = "https://github.com/mr-lapinou/automove"
 __license__ = "GPLv3"
 __description__ = ""
 __long_description__ = """"""

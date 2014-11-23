@@ -46,10 +46,5 @@ from common import get_resource
 
 class WebUI(WebPluginBase):
 
-    scripts = [get_resource("automove.js")]
-
-    def enable(self):
-        pass
-
-    def disable(self):
-        pass
+	scripts = [get_resource("automove.js")]
+	debug_scripts = scripts
