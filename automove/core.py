@@ -44,8 +44,7 @@ import deluge.configmanager
 from deluge.core.rpcserver import export
 
 DEFAULT_PREFS = {
-	"trackers" : [	{"url" : "what.cd", "dst" : "/media/diskstorage1/music/","cmd": "mpc -h volumio update" }
-				]
+	"trackers" : []
 }
 
 class Core(CorePluginBase):
@@ -56,21 +55,21 @@ class Core(CorePluginBase):
 		self.connect_events()
 
 	def disable(self):
-		log.debug("Disabling Automove plugin") 
+		log.debug("Disabling Automove plugin")
 		self.disconnect_events()
-        
+
 	def update(self):
 		pass
-		
+
 	def connect_events(self):
 		event_manager = component.get("EventManager")
 		event_manager.register_event_handler("TorrentFinishedEvent", self.on_torrent_finished)
-	
+
 	def disconnect_events(self):
 		event_manager = component.get("EventManager")
 		event_manager.deregister_event_handler("TorrentFinishedEvent", self.on_torrent_finished)
-	
-	
+
+
 	def on_torrent_finished(self, torrent_id):
 		log.debug("Torrent finished callback for %s", torrent_id)
 		torrent = component.get("TorrentManager")[torrent_id]
