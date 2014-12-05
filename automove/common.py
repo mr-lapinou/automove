@@ -39,4 +39,4 @@
 
 def get_resource(filename):
     import pkg_resources, os
-    return pkg_resources.resource_filename("Automove", os.path.join("data", filename))
+    return pkg_resources.resource_filename("automove", os.path.join("data", filename))

@@ -50,12 +50,12 @@ DEFAULT_PREFS = {
 class Core(CorePluginBase):
 
 	def enable(self):
-		log.debug("Enabling Automove plugin")
+		log.info("Enabling Automove plugin")
 		self.config = deluge.configmanager.ConfigManager("automove.conf", DEFAULT_PREFS)
 		self.connect_events()
 
 	def disable(self):
-		log.debug("Disabling Automove plugin")
+		log.info("Disabling Automove plugin")
 		self.disconnect_events()
 
 	def update(self):
@@ -71,7 +71,7 @@ class Core(CorePluginBase):
 
 
 	def on_torrent_finished(self, torrent_id):
-		log.debug("Torrent finished callback for %s", torrent_id)
+		log.info("Torrent finished callback for %s", torrent_id)
 		torrent = component.get("TorrentManager")[torrent_id]
 		tracker = torrent.get_tracker_host()
 		for key in self.config["trackers"]:
@@ -79,10 +79,10 @@ class Core(CorePluginBase):
 			if key["url"] in tracker:
 				print "found"
 				if torrent.move_storage(key["dst"]):
-					log.debug("update volumio DB")
+					log.info("update volumio DB")
 					call(key["cmd"],shell=True)
 				break
-		log.debug("Torrent '%s' from tracker: %s", torrent, tracker)
+		log.info("Torrent '%s' from tracker: %s", torrent, tracker)
 
 	@export
 	def set_config(self, config):

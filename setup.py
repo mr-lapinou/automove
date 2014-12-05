@@ -39,7 +39,7 @@
 
 from setuptools import setup
 
-__plugin_name__ = "Automove"
+__plugin_name__ = "automove"
 __author__ = "Thibault Person"
 __author_email__ = "thibaultperson@gmail.com"
 __version__ = "0.2"

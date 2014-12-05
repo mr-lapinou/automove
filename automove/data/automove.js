@@ -97,114 +97,54 @@ Deluge.plugins.automove.ui.PreferencePage = Ext.extend(Ext.Panel, {
     Deluge.plugins.automove.ui.PreferencePage.superclass.initComponent.call(
       this);
 
-    this.chkApplyOnStart = this.add({
-      xtype: 'checkbox',
-      margins: '0 5 5 5',
-      boxLabel: _('Apply settings on startup')
-    });
-
-
-    this.presetsContainer = this.add({
-        xtype: 'button',
-        text: 'Add tracker'
-      },
-	  {
-        xtype: 'button',
-        text: 'Remove tracker'
-      }
-    );
-
-    this.tblSettings = this.add({
+    this.tblTrackers = this.add({
       xtype: 'editorgrid',
       margins: '0 5 0 5',
       flex: 1,
-      autoExpandColumn: 'name',
-
+      autoExpandColumn: 'url',
       viewConfig: {
-        emptyText: _('Loading settings...'),
+        emptyText: _('Loading trackers...'),
         deferEmptyText: false
       },
 
       colModel: new Ext.grid.ColumnModel({
-        defaults: {
-          renderer: function(value, meta, record, rowIndex, colIndex, store) {
-            if (colIndex == 3 || !record.get('enabled')) {
-              meta.attr = 'style="color: gray;"';
-            }
-
-            if (Ext.isNumber(value) && parseInt(value) !== value) {
-              return value.toFixed(6);
-            } else if (Ext.isBoolean(value)) {
-              return '<div class="x-grid3-check-col' + (value ? '-on' : '') +
-                '" style="width: 20px;">&#160;</div>';
-            }
-
-            return value;
-          }
-        },
-
         columns: [
           {
-            id: 'tracker',
-            header: _('sdfsdfsdfsfsTracker URL'),
-            dataIndex: 'tracker',
+            id: 'url',
+            header: _('Url'),
+            dataIndex: 'url',
             sortable: true,
             hideable: false
           },
           {
-            id: 'dstfolder',
-            header: _('Dest. folder'),
-            dataIndex: 'dstfolder',
+            id: 'dst',
+            header: _('Dst'),
+            dataIndex: 'dst',
             hideable: false,
-            width: 60,
-            editor: {
-              xtype: 'textfield'
-            }
+            width: 120,
+          },
+          {
+            id: 'cmd',
+            header: _('Command'),
+            dataIndex: 'cmd',
+            width: 120
           }
         ]
+      }),
+      selModel: new Ext.grid.RowSelectionModel({
+                singleSelect: false,
+                moveEditorOnEnter: false
       }),
 
       store: new Ext.data.ArrayStore({
         autoDestroy: true,
 
         fields: [
-          {name: 'tracker'},
-          {name: 'dstfolder'}
+          {name: 'url'},
+          {name: 'dst'},
+          {name: 'cmd'}
         ]
       }),
-
-      listeners: {
-        cellclick: function(grid, rowIndex, colIndex, e) {
-          var record = grid.getStore().getAt(rowIndex);
-          var field = grid.getColumnModel().getDataIndex(colIndex);
-          var value = record.get(field);
-/*
-          if (colIndex == 0 || (record.get('enabled') && colIndex == 2)) {
-            if (Ext.isBoolean(value)) {
-              record.set(field, !value);
-
-              if (colIndex == 0 && !record.get('enabled')) {
-                record.set('setting', this.baseSettings[record.get('name')]);
-              }
-
-              record.commit();
-            }
-          }
-		  */
-        },
-
-        beforeedit: function(e) {
-          if (Ext.isBoolean(e.value)) {
-            return false;
-          }
-
-          return e.record.get('enabled');
-        },
-
-        afteredit: function(e) {
-          e.record.commit();
-        }
-      },
 
       setEmptyText: function(text) {
         if (this.viewReady) {
@@ -223,7 +163,31 @@ Deluge.plugins.automove.ui.PreferencePage = Ext.extend(Ext.Panel, {
       }
     });
 
-    this.presetsContainer.getComponent(1).setHandler(this.loadPreset, this);
+    this.buttonsContainer = this.add({
+      xtype: 'container',
+      layout: 'hbox',
+      margins: '4 0 0 5',
+      items: [{
+          xtype: 'button',
+          text: 'New rule',
+          iconCls: 'icon-add',
+          margins: '0 8 0 0'
+        }, {
+          xtype: 'button',
+          text: 'Edit rule',
+          iconCls: 'icon-edit',
+          margins: '0 8 0 0'
+        }, {
+          xtype: 'button',
+          text: 'Delete rule',
+          iconCls: 'icon-delete'
+        }
+      ]
+    });
+
+    this.buttonsContainer.getComponent(0).setHandler(this.addTracker, this);
+    this.buttonsContainer.getComponent(1).setHandler(this.editTracker, this);
+    this.buttonsContainer.getComponent(2).setHandler(this.removeTracker, this);
 
     deluge.preferences.on('show', this.loadPrefs, this);
     deluge.preferences.buttons[1].on('click', this.savePrefs, this);
@@ -242,7 +206,7 @@ Deluge.plugins.automove.ui.PreferencePage = Ext.extend(Ext.Panel, {
 
   waitForClient: function(triesLeft) {
     if (triesLeft < 1) {
-      this.tblSettings.setEmptyText(_('Unable to load settings'));
+      this.tblTrackers.setEmptyText(_('Unable to load settings'));
       return;
     }
 
@@ -252,46 +216,8 @@ Deluge.plugins.automove.ui.PreferencePage = Ext.extend(Ext.Panel, {
       var t = deluge.login.isVisible() ? triesLeft : triesLeft-1;
       setTimeout(function() { self.waitForClient.apply(self, [t]); }, 1000);
     } else if (!this.isDestroyed) {
-      this.loadBaseState();
+      this.loadPrefs();
     }
-  },
-
-  loadBaseState: function() {
-    this._loadBaseState1();
-  },
-
-  _loadBaseState1: function() {
-    deluge.client.core.get_libtorrent_version({
-      success: function(version) {
-        if (Number(version.split('.')[1]) < 16) {
-          this.presetsContainer.getComponent(0).getStore().removeAt(2);
-          this.presetsContainer.getComponent(0).getStore().removeAt(1);
-        }
-        this.lblVersion.setText(this.lblVersion.caption + version);
-        this._loadBaseState2();
-      },
-      scope: this
-    });
-  },
-
-  _loadBaseState2: function() {
-    deluge.client.automove.get_original_settings({
-      success: function(settings) {
-        this.tblSettings.baseSettings = settings;
-
-        var data = [];
-        var keys = Ext.keys(settings).sort();
-
-        for (var i = 0; i < keys.length; i++) {
-          var key = keys[i];
-          data.push([false, key, settings[key], settings[key]]);
-        }
-
-        this.tblSettings.loadData(data);
-        this.loadPrefs();
-      },
-      scope: this
-    });
   },
 
   loadPrefs: function() {
@@ -301,95 +227,216 @@ Deluge.plugins.automove.ui.PreferencePage = Ext.extend(Ext.Panel, {
   },
 
   _loadPrefs1: function() {
-    deluge.client.automove.get_preferences({
+    deluge.client.automove.get_config({
       success: function(prefs) {
         this.preferences = prefs;
-        this._loadPrefs2();
+        this.loadTrackers(prefs['trackers']);
       },
       scope: this
     });
   },
 
-  _loadPrefs2: function() {
-    deluge.client.automove.get_settings({
-      success: function(settings) {
-        var store = this.tblSettings.getStore();
 
-        for (var i = 0; i < store.getCount(); i++) {
-          var record = store.getAt(i);
-          var name = record.get('name');
 
-          if (name in settings) {
-            record.set('actual', settings[name]);
-            record.commit();
-          }
+   addTracker: function(){
+    this.createForm('','','', null);
+
+  },
+
+  createForm: function(url, dst, cmd, row){
+
+    this.dialog = {
+      init: function(parent, url, dst, cmd, row){
+        this.parent = parent;
+        this.row = row;
+        this.window= new Ext.Window({
+            title: 'Edit tracker',
+            modal:true,
+            resizable : false,
+            height: 170,
+            width: 450,
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            }
+        });
+        this.urlc = this.window.add(
+        {xtype: 'container',
+          layout: 'hbox',
+          margins: '15 0 0 5',
+          items: [{
+              xtype: 'label',
+              text: 'Url tracker* :',
+              margins: '5 0 0 0',
+              width:100
+
+
+            },
+            {
+              xtype: 'field',
+              value: url,
+              width:320
+            }
+          ]
+        });
+        this.dstc = this.window.add(
+        {xtype: 'container',
+          layout: 'hbox',
+          margins: '5 0 0 5',
+          items: [{
+              xtype: 'label',
+              text: 'Destination folder* :',
+              margins: '5 0 0 0',
+              width: 100
+            },
+            {
+              xtype: 'field',
+              value : dst,
+              width:320
+            }
+          ]
+        });
+        this.cmdc = this.window.add(
+        {xtype: 'container',
+          layout: 'hbox',
+          margins: '5 0 0 5',
+          items: [{
+              xtype: 'label',
+              text: 'Command :',
+              margins: '5 0 0 0',
+              width:100
+            },
+            {
+              xtype: 'field',
+              value: cmd,
+              width:320
+            }
+          ]
+        });
+
+        this.buttons = this.window.add({xtype: 'container',
+          layout: {
+            type:'hbox',
+            pack:'end'
+          },
+          margins: '10 10 0 5',
+          items: [
+            {
+              xtype: 'button',
+              text: 'Cancel',
+              iconCls: 'icon-back'
+            },
+            {
+              xtype: 'button',
+              text: 'Save',
+              iconCls: 'icon-ok',
+              margins: '0 10 0 0'
+            }
+          ]
+        });
+
+        this.urlc.getComponent(1).on('change', this.isvalid,this);
+        this.dstc.getComponent(1).on('change', this.isvalid,this);
+        //Save
+        this.buttons.getComponent(1).setHandler(this.saveForm, this);
+        //Cancel
+        this.buttons.getComponent(0).setHandler(this.closeForm, this);
+        this.isvalid();
+      },
+
+      saveForm: function(){
+        console.log("save");
+        var u = this.urlc.getComponent(1).getValue();
+        var d = this.dstc.getComponent(1).getValue();
+        var c = this.cmdc.getComponent(1).getValue();
+
+        var store = this.parent.tblTrackers.getStore();
+        if(this.row==null){
+          var Tracker = store.recordType;
+          var t = new Tracker({
+              url: u, dst: d,cmd:c
+          });
+          this.parent.tblTrackers.stopEditing();
+          store.add(t);
+          this.parent.tblTrackers.startEditing(0, 0);
         }
+        else{
+          console.lo
+          this.row.set('url', u);
+          this.row.set('cmd',c);
+          this.row.set('dst', d);
+          store.commitChanges();
+        }
+
+        this.window.close();
       },
-      scope: this
-    });
-  },
 
-  savePrefs: function() {
-    var settings = {};
-    var store = this.tblSettings.getStore();
-    var apply = false;
+      closeForm: function(){
+        this.window.close();
+      },
 
-    for (var i = 0; i < store.getCount(); i++) {
-      var record = store.getAt(i);
-      var name = record.get('name');
+      isvalid: function(){
+        var t = this.urlc.getComponent(1).getValue().length>0 && this.dstc.getComponent(1).getValue().length>0 ;
+        this.buttons.getComponent(1).setDisabled(!t);
+      },
 
-      if (record.get('enabled')) {
-        settings[name] = record.get('setting');
-        apply |= record.get('setting') != record.get('actual');
+      show: function(){
+        this.window.show();
       }
     }
+    this.dialog.init(this, url, dst, cmd, row);
+    this.dialog.show();
 
-    var prefs = {
-      apply_on_start: this.chkApplyOnStart.getValue(),
-      settings: settings
-    };
-
-    apply |= prefs['apply_on_start'] != this.preferences['apply_on_start'];
-    apply |= !Deluge.plugins.automove.util.dictEquals(prefs['settings'],
-      this.preferences['settings']);
-
-    if (apply) {
-      deluge.client.automove.set_preferences(prefs, {
-        success: this.loadPrefs,
-        scope: this
-      });
-    }
   },
 
-  loadSettings: function(settings) {
-    var store = this.tblSettings.getStore();
-
-    for (var i = 0; i < store.getCount(); i++) {
-      var record = store.getAt(i);
-      var name = record.get('name');
-
-      if (name in settings) {
-        record.set('enabled', true);
-        record.set('setting', settings[name]);
-      } else {
-        record.set('enabled', false);
-        record.set('setting', this.tblSettings.baseSettings[name]);
-      }
+  editTracker: function(){
+    var selections = this.tblTrackers.getSelectionModel().getSelections();
+    var store = this.tblTrackers.getStore();
+    for(var i=0; i<selections.length;i++){
+      data = selections[i]['data'];
+      this.createForm(data['url'],data['dst'],data['cmd'], selections[i]);
+      break;
     }
 
+  },
+
+  removeTracker: function(){
+    var selections = this.tblTrackers.getSelectionModel().getSelections();
+    var store = this.tblTrackers.getStore();
+    for(var i=0; i<selections.length;i++){
+      store.remove(selections[i]);
+      break;
+    }
     store.commitChanges();
   },
 
-  loadPreset: function() {
-    var preset = this.presetsContainer.getComponent(0).getValue();
-
-    if (Ext.isNumber(preset)) {
-      deluge.client.automove.get_preset(preset, {
-        success: this.loadSettings,
-        scope: this
-      });
+  loadTrackers: function(trackers){
+    var store = this.tblTrackers.getStore();
+    var data=[]
+    for (var i = 0; i<trackers.length; i++){
+      data.push([trackers[i]['url'],trackers[i]['dst'],trackers[i]['cmd']]);
     }
-  }
+    this.tblTrackers.loadData(data);
+
+  },
+
+  savePrefs: function() {
+    var trackers = [];
+    var store = this.tblTrackers.getStore();
+    var apply = false;
+    store.each(function(row){
+      var d = row['data'];
+      var r = {url: d['url'], dst: d['dst'], cmd: d['cmd']};
+      trackers.push(r);
+
+    },this);
+    this.preferences['trackers'] = trackers;
+    deluge.client.automove.set_config(this.preferences, {
+      success: this.loadPrefs,
+      scope: this
+    });
+  },
+
 });
 
 

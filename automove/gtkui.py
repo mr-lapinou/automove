@@ -121,19 +121,19 @@ class TrackerDialog(gtk.Dialog):
 
 class GtkUI(GtkPluginBase):
 	def enable(self):
-		log.debug("applying prefs for automove")
+		log.info("applying prefs for automove")
 
 		component.get("PluginManager").register_hook("on_apply_prefs", self.on_apply_prefs)
 		component.get("PluginManager").register_hook("on_show_prefs", self.on_show_prefs)
 		self.load_ui()
-
 		self.dirty = False
 
 
 
 
 	def disable(self):
-		log.debug("applying prefs for automove")
+		log.info("applying prefs for automove")
+		component.get("Preferences").remove_page("automove")
 
 
 
@@ -180,7 +180,7 @@ class GtkUI(GtkPluginBase):
 		vBox.pack_end(self.treeview)
 		mainWindow.add(vBox)
 		mainWindow.show_all()
-		component.get("Preferences").add_page("Automove", self.window)
+		component.get("Preferences").add_page("automove", self.window)
 
 	def on_add_tracker(self, widget):
 		dialog = TrackerDialog(None)
@@ -212,14 +212,14 @@ class GtkUI(GtkPluginBase):
 
 	def populate_list(self):
 		if self.dirty :
-			log.debug("List in dirty state, don't reload prefs")
+			log.info("List in dirty state, don't reload prefs")
 			return
 		self.liststore.clear()
 		for t in self.config["trackers"]:
 			self.liststore.append(row=[ t["url"], t["dst"], t["cmd"] ])
 
 	def on_apply_prefs(self):
-		log.debug("applying prefs for automove")
+		log.info("applying prefs for automove")
 		#dump the list
 		tl = []
 		for row in self.liststore:
